@@ -7,7 +7,7 @@ from pathlib import Path
 
 def default_path() -> Path:
     base = os.environ.get("APPDATA") or str(Path.home())
-    return Path(base) / "AudioSplitter" / "settings.json"
+    return Path(base) / "Fernwire" / "settings.json"
 
 
 class Settings:

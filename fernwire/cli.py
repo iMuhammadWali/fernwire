@@ -72,7 +72,7 @@ def main(argv=None) -> None:
     argv = sys.argv[1:] if argv is None else argv
     include_virtual = "--virtual" in argv
     print("=" * 52)
-    print("  Audio Splitter - Automatic Mode")
+    print("  Fernwire - Automatic Mode")
     print("=" * 52)
     while run_session(include_virtual):
         print("  Reconnecting in 2 seconds...\n")

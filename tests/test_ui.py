@@ -8,10 +8,10 @@ import pytest  # noqa: E402
 from PySide6.QtCore import Qt  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
-from audio_splitter.ui.demo import FakeEngine, MemorySettings, demo_devices  # noqa: E402
-from audio_splitter.ui.tokens import theme  # noqa: E402
-from audio_splitter.ui.widgets import LinkButton  # noqa: E402
-from audio_splitter.ui.window import MainWindow  # noqa: E402
+from fernwire.ui.demo import FakeEngine, MemorySettings, demo_devices  # noqa: E402
+from fernwire.ui.tokens import theme  # noqa: E402
+from fernwire.ui.widgets import LinkButton  # noqa: E402
+from fernwire.ui.window import MainWindow  # noqa: E402
 
 SOUNDCORE, SOUNDPEATS, AIRPODS = "Soundcore Liberty 4 NC", "SoundPeats T3 Pro", "AirPods Pro"
 
@@ -129,7 +129,7 @@ def test_delay_changes_reach_the_engine_while_sharing(win, app):
 
 # ── icon ──────────────────────────────────────────────────────────
 def test_icon_draws_at_every_size_and_lit_differs_from_dim(app):
-    from audio_splitter.ui.icon import SIZES, app_icon, draw_icon
+    from fernwire.ui.icon import SIZES, app_icon, draw_icon
     for size in SIZES:
         img = draw_icon(size)
         assert img.width() == size and img.height() == size and not img.isNull()
@@ -144,7 +144,7 @@ PNG_SIGNATURE = bytes([0x89]) + b"PNG" + bytes([0x0D, 0x0A, 0x1A, 0x0A])
 def test_ico_file_is_valid_and_has_png_frames(name):
     import struct
     from pathlib import Path
-    data = (Path(__file__).resolve().parent.parent / "audio_splitter" / "assets" / name).read_bytes()
+    data = (Path(__file__).resolve().parent.parent / "fernwire" / "assets" / name).read_bytes()
     reserved, kind, count = struct.unpack("<HHH", data[:6])
     assert (reserved, kind) == (0, 1) and count == 7
     for i in range(count):
@@ -154,7 +154,7 @@ def test_ico_file_is_valid_and_has_png_frames(name):
 
 
 def test_light_and_dark_icons_differ_and_window_icon_follows_theme(win, app):
-    from audio_splitter.ui.icon import draw_icon
+    from fernwire.ui.icon import draw_icon
     assert draw_icon(48, True, "light") != draw_icon(48, True, "dark")
     theme.set("light"); app.processEvents()
     light_key = win.windowIcon().cacheKey()

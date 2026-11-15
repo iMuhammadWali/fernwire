@@ -1,7 +1,7 @@
 import numpy as np
 
-from audio_splitter.delay import DelayLine
-from audio_splitter.devices import BUILTIN, EXTERNAL, VIRTUAL, DeviceInfo, choose_targets, classify
+from fernwire.delay import DelayLine
+from fernwire.devices import BUILTIN, EXTERNAL, VIRTUAL, DeviceInfo, choose_targets, classify
 
 RATE, CH = 48000, 2
 

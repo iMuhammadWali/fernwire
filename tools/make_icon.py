@@ -1,4 +1,4 @@
-"""Write audio_splitter/assets/icon.ico + icon_light.ico (and .png) from the code-drawn icon.
+"""Write fernwire/assets/icon.ico + icon_light.ico (and .png) from the code-drawn icon.
 
     python tools/make_icon.py
 """
@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from PySide6.QtCore import QBuffer, QIODevice  # noqa: E402
 from PySide6.QtGui import QGuiApplication  # noqa: E402
 
-from audio_splitter.ui.icon import draw_icon  # noqa: E402
+from fernwire.ui.icon import draw_icon  # noqa: E402
 
 ICO_SIZES = (16, 24, 32, 48, 64, 128, 256)
 
@@ -40,7 +40,7 @@ def write_ico(path: Path, style: str) -> None:
 
 if __name__ == "__main__":
     app = QGuiApplication([])
-    out = Path(__file__).resolve().parent.parent / "audio_splitter" / "assets"
+    out = Path(__file__).resolve().parent.parent / "fernwire" / "assets"
     out.mkdir(parents=True, exist_ok=True)
     for style, suffix in (("dark", ""), ("light", "_light")):
         write_ico(out / f"icon{suffix}.ico", style)

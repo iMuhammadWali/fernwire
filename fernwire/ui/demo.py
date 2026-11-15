@@ -1,5 +1,5 @@
 """Demo mode: fake devices and a fake engine, so the window can be developed and screenshotted
-without any Bluetooth hardware. Used by ``python -m audio_splitter.ui --demo``."""
+without any Bluetooth hardware. Used by ``python -m fernwire.ui --demo``."""
 
 import math
 import time
@@ -43,7 +43,7 @@ class MemorySettings(Settings):
 
 
 class FakeEngine:
-    """Same interface as audio_splitter.engine.Engine, with a made-up signal."""
+    """Same interface as fernwire.engine.Engine, with a made-up signal."""
 
     def __init__(self, on_event=None, **_):
         self._targets = {}

@@ -80,7 +80,7 @@ class MainWindow(QWidget):
         super().__init__()
         self.setObjectName("root")
         self.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
-        self.setWindowTitle("Audio Splitter")
+        self.setWindowTitle("Fernwire")
         self.setWindowIcon(app_icon())
         self.setMinimumWidth(380)
         self.resize(440, 520)

@@ -1,4 +1,4 @@
-"""Run the window:  python -m audio_splitter.ui
+"""Run the window:  python -m fernwire.ui
 
 Developer options:
   --demo                     fake devices, no hardware needed
@@ -24,7 +24,7 @@ from .window import MainWindow
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(prog="audio_splitter.ui")
+    ap = argparse.ArgumentParser(prog="fernwire.ui")
     ap.add_argument("--demo", action="store_true")
     ap.add_argument("--theme", choices=["auto", "dark", "light"])
     ap.add_argument("--state", choices=["idle", "sharing", "lost", "empty", "tune"], default="idle")
@@ -32,14 +32,14 @@ def main(argv=None) -> int:
     args = ap.parse_args(sys.argv[1:] if argv is None else argv)
 
     try:    # own taskbar identity, so Windows shows OUR icon (not python.exe's) and groups it correctly
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("AudioSplitter.App")
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("Fernwire.App")
     except Exception:  # noqa: BLE001
         pass
     app = QApplication(sys.argv[:1])
     app.setWindowIcon(app_icon())
     app.setStyle("Fusion")
     app.setFont(make_font(14))
-    app.setApplicationName("Audio Splitter")
+    app.setApplicationName("Fernwire")
 
     if args.demo:
         empty = args.state == "empty"
