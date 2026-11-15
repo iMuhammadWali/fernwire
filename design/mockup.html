@@ -1,0 +1,391 @@
+<!doctype html>
+<!--
+THESIS: A routing tool, not a dashboard. One source branches to many devices, and the
+  branch lines ARE the interface. Refuses: stacked cards, icon tiles, eyebrow labels, glow.
+OWN-WORLD: Windows-native Operate surface. One family (Segoe UI), fixed small scale,
+  hairline rows on one panel, a rail with elbow connectors that light up when audio flows.
+  Dark = near-black; silver action, true neutral greys, no tint.
+  Light = white ground, one blue accent (daytime desk).
+STORY: See what is playing where, switch devices on or off, start. Fix sync only if needed.
+FIRST VIEWPORT: Title bar; source row at the rail's head; device rows branching off it;
+  footer with status text left and the single primary action right.
+FORM: Branching tree list, the mechanism drawn literally. Preview controls sit OUTSIDE the
+  window and are not part of the app. Levels and "Measure" are simulated here.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audio Splitter UI mockup</title>
+<style>
+  /* ── Tokens. The app swaps data-theme; nothing else changes. ── */
+  /* Dark theme: near-black, a soft graphite curve,
+     one silver hairline, a faint warm rim. Restraint is the point.
+     Silver = sound flowing and active controls. Everything else is true neutral grey.
+     Soft coral = problems.
+     Elevation ladder (lighter = more raised): stage < window < bar/inputs < hover/selected. */
+  [data-theme="dark"] {
+    --stage: #080808;
+    --win: #181818;
+    --bar: #222222;
+    --line: #2e2e2e;        /* chrome edges: window, title bar, footer */
+    --divider: #262626;     /* between rows: quietest line */
+    --rail: #666666;        /* the branch rail, idle (>=3:1) */
+    --line-strong: #707070; /* control borders: dropdown, buttons (>=3:1) */
+    --track: #2b2b2b;       /* empty part of level bars */
+    --faint: #8a8a8a;       /* tertiary text: unavailable, hints */
+    --text: #f2f2f2;
+    --muted: #ababab;
+    --accent: #e6e6e6;
+    --accent-ink: #0c0c0c;
+    --accent-weak: #2e2e2e;
+    --error: #d9745b;
+    --off: #707070;
+    --knob: #ececec;
+    --origin: var(--accent);
+    --origin-idle: var(--muted);
+    --tune: var(--text);
+    --tune-bg: #202020;
+    --tune-line: #3a3a3a;
+    --tune-accent: var(--accent);
+    --sheen: radial-gradient(90% 55% at 100% 0%, rgba(255,255,255,.07), transparent 70%);
+    --shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 2px 4px rgba(0,0,0,.6), 0 18px 48px rgba(0,0,0,.7);
+  }
+  [data-theme="light"] {
+    --stage: #dfe6f0;
+    --win: #ffffff;
+    --bar: #f3f6fb;
+    --line: #dde4ee;
+    --divider: #e9eef5;
+    --rail: #8693a6;
+    --line-strong: #7f8b9d;
+    --track: #e6ebf2;
+    --faint: #6b7789;
+    --text: #15202e;
+    --muted: #566478;
+    --accent: #1c5fd1;
+    --accent-ink: #ffffff;
+    --accent-weak: #dbe7fb;
+    --error: #c62828;
+    --off: #7f8b9d;
+    --knob: #ffffff;
+    /* Light stays two-hue: the origin/tune roles map onto its existing colors. */
+    --origin: var(--accent);
+    --origin-idle: var(--muted);
+    --tune: var(--muted);
+    --tune-bg: var(--bar);
+    --tune-line: var(--line);
+    --tune-accent: var(--accent);
+    --shadow: 0 2px 4px rgba(21,32,46,.10), 0 18px 40px rgba(21,32,46,.16);
+  }
+
+  * { box-sizing: border-box; }
+  html { font-size: 16px; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--stage); color: var(--text);
+    font: 400 .875rem/1.45 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    display: flex; flex-direction: column; align-items: center; gap: 20px;
+    padding: 24px 16px 40px; transition: background .2s;
+  }
+
+  /* Preview controls (outside the app) */
+  .preview { display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: center; color: var(--muted); font-size: .8125rem; }
+  .preview fieldset { border: 0; margin: 0; padding: 0; display: flex; align-items: center; gap: 6px; }
+  .preview legend { float: left; margin-right: 8px; padding: 0; }
+  .preview button {
+    font: inherit; color: var(--text); background: transparent; border: 1px solid var(--line);
+    border-radius: 6px; padding: 4px 10px; cursor: pointer; white-space: nowrap;
+  }
+  .preview fieldset { flex-wrap: wrap; justify-content: center; }
+  .preview button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+  /* Window */
+  .window { width: 100%; max-width: 440px; background: var(--win); background-image: var(--sheen, none); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); overflow: hidden; transition: background .2s, border-color .2s; }
+  .titlebar { display: flex; align-items: center; justify-content: space-between; height: 36px; padding-left: 14px; background: var(--bar); border-bottom: 1px solid var(--line); font-size: .8125rem; }
+  .titlebar .btns { display: flex; }
+  .titlebar .btns i { width: 44px; height: 36px; display: grid; place-items: center; color: var(--muted); font-style: normal; }
+  .titlebar .btns svg { width: 10px; height: 10px; stroke: currentColor; fill: none; stroke-width: 1; }
+
+  main { padding: 16px 16px 8px; }
+  h2 { font-size: .8125rem; font-weight: 600; margin: 0 0 6px; color: var(--muted); }
+
+  /* The rail: source at the head, devices branch off */
+  .tree { position: relative; list-style: none; margin: 0 0 14px; padding: 0; }
+  .node { position: relative; padding: 10px 0 10px 40px; min-height: 52px; }
+  .node + .node { border-top: 1px solid var(--divider); }
+  /* The trunk: one shared rail. It is lit from the source down to the LAST active device, passing
+     straight by any device that is off or lost, so the path never looks broken. Each branch (elbow)
+     lights only if its own device is active. --up lights the half above a branch, --down the half below. */
+  @property --up   { syntax: '<color>'; inherits: true; initial-value: #0000; }
+  @property --down { syntax: '<color>'; inherits: true; initial-value: #0000; }
+  .node { --up: var(--rail); --down: var(--rail); transition: --up .2s, --down .2s; }
+  .node::before {
+    content: ""; position: absolute; left: 13px; top: 0; bottom: 0; width: 2px;
+    background: linear-gradient(to bottom, var(--up) 0 26px, var(--down) 26px 100%);
+  }
+  .tree .node:first-child::before { top: 26px; background: var(--down); }
+  .tree .node:last-child::before { bottom: calc(100% - 26px); }
+  .tree .node:only-child::before { display: none; }
+  /* branch into each device */
+  .node.dev::after {
+    content: ""; position: absolute; left: 13px; top: 26px; width: 18px; height: 2px;
+    background: var(--rail); transition: background .2s;
+  }
+  .flow .node.on::after { background: var(--accent); }
+  /* a device that dropped out: its branch is dashed, in the error color, until it is back */
+  .flow .node.lost::after { background: repeating-linear-gradient(to right, var(--error) 0 4px, transparent 4px 7px); }
+  .node.src .dot {
+    position: absolute; left: 7px; top: 20px; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--win); border: 2px solid var(--origin-idle); transition: border-color .2s, background .2s;
+  }
+  .flow .node.src .dot { border-color: var(--origin); background: var(--origin); }
+
+  .line1 { display: flex; align-items: center; gap: 12px; min-height: 32px; }
+  .name { flex: 1; min-width: 0; font-weight: 600; line-height: 1.45; font-size: .9375rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sub { color: var(--muted); font-size: .8125rem; }
+  .sub.error { color: var(--error); }
+  .sub.faint { color: var(--faint); }
+  .node.off .name { color: var(--muted); font-weight: 400; }
+
+  select {
+    font: inherit; color: var(--text); background: var(--bar); border: 1px solid var(--line-strong);
+    border-radius: 6px; padding: 5px 8px; max-width: 100%; width: 100%;
+  }
+
+  /* Switch */
+  .switch { position: relative; width: 44px; height: 24px; flex: none; }
+  .switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+  .switch span { position: absolute; inset: 2px 0; border-radius: 999px; background: var(--off); transition: background .15s; pointer-events: none; }
+  .switch span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--knob); transition: transform .15s; }
+  .switch input:checked + span { background: var(--accent); }
+  .switch input:checked + span::after { transform: translateX(24px); background: var(--accent-ink); }
+  .switch input:focus-visible { outline: none; }
+  .switch input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .switch input:disabled { cursor: not-allowed; }
+  .switch input:disabled + span { opacity: .45; }
+
+  /* Level + delay (only while flowing) */
+  /* Reserved always (hidden, never display:none) so starting/stopping never changes a row's height. */
+  .level { visibility: hidden; height: 3px; border-radius: 2px; background: var(--track); margin: 6px 0 2px; overflow: hidden; }
+  .level i { display: block; height: 100%; background: var(--accent); transform-origin: left; transform: scaleX(0); }
+  .node.on .level { visibility: visible; }
+
+  /* Weight changes must never change a box. The link keeps the line's own height (no padding,
+     inherited line-height) and an invisible bold copy of its text reserves the bold width. */
+  .delaybtn {
+    display: inline-grid; line-height: inherit; vertical-align: baseline;
+    font: inherit; font-size: .8125rem; color: var(--muted); background: none; border: 0; padding: 0;
+    cursor: pointer; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px;
+    font-variant-numeric: tabular-nums;
+  }
+  .delaybtn { position: relative; }
+  .delaybtn::before { content: ""; position: absolute; inset: -3px -6px; } /* 25px tall target, no layout change */
+  .delaybtn::after { content: attr(data-text); font-weight: 600; height: 0; overflow: hidden; visibility: hidden; pointer-events: none; user-select: none; }
+  .delaybtn.set { color: var(--tune); text-decoration-color: var(--muted); font-weight: 600; }
+  .delaybtn:hover { color: var(--text); }
+  .tune { display: none; margin-top: 8px; padding: 10px 12px; background: var(--tune-bg); border: 1px solid var(--tune-line); border-radius: 6px; }
+  .tune.open { display: block; }
+  .tune .ctl { display: flex; align-items: center; gap: 12px; }
+  .tune input[type=range] { flex: 1; accent-color: var(--tune-accent); min-width: 0; }
+  .tune .btn2 { border-color: var(--tune-line); }
+  .tune .btn2:hover { background: var(--tune-line); }
+  .tune output { width: 56px; text-align: right; font-variant-numeric: tabular-nums; }
+  .tune .row2 { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; }
+  .tune .row2 span { color: var(--muted); font-size: .8125rem; }
+  .btn2 {
+    font: inherit; color: var(--text); background: transparent; border: 1px solid var(--line-strong);
+    border-radius: 6px; padding: 5px 12px; cursor: pointer; white-space: nowrap;
+  }
+  .btn2:hover { background: var(--accent-weak); }
+  .btn2:disabled { opacity: .6; cursor: default; }
+
+  .empty { padding: 20px 4px 12px; }
+  .empty p { margin: 0 0 12px; max-width: 34ch; }
+  .empty a { color: var(--accent); }
+
+  .opt { display: flex; align-items: center; gap: 8px; color: var(--muted); padding: 4px 0 12px; }
+  .opt input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
+
+  footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; background: var(--bar); border-top: 1px solid var(--line); }
+  #status { color: var(--muted); }
+  #status b { color: var(--text); font-weight: 600; }
+  #go {
+    font: 600 .875rem "Segoe UI", system-ui, sans-serif; background: var(--accent); color: var(--accent-ink);
+    border: 1px solid transparent; border-radius: 6px; padding: 7px 18px; cursor: pointer; transition: filter .15s;
+  }
+  #go:hover:not(:disabled) { filter: brightness(1.08); }
+  #go:active:not(:disabled) { filter: brightness(.94); }
+  #go:disabled { background: var(--off); color: var(--win); opacity: .6; cursor: not-allowed; }
+  #go.stop { background: transparent; color: var(--text); border-color: var(--muted); }
+  #go.stop:hover { background: var(--accent-weak); }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body data-theme="dark">
+
+<div class="preview" aria-label="Mockup controls (not part of the app)">
+  <fieldset><legend>Theme</legend>
+    <button data-theme-set="dark" aria-pressed="true">Dark</button>
+    <button data-theme-set="light" aria-pressed="false">Light</button>
+  </fieldset>
+  <fieldset><legend>State</legend>
+    <button data-state="idle" aria-pressed="true">Ready</button>
+    <button data-state="sharing" aria-pressed="false">Sharing</button>
+    <button data-state="lost" aria-pressed="false">Device lost</button>
+    <button data-state="empty" aria-pressed="false">No devices</button>
+  </fieldset>
+</div>
+
+<div class="window">
+  <div class="titlebar">
+    <span>Audio Splitter</span>
+    <span class="btns" aria-hidden="true">
+      <i><svg viewBox="0 0 10 10"><path d="M0 5.5h10"/></svg></i>
+      <i><svg viewBox="0 0 10 10"><path d="M0 0l10 10M10 0L0 10"/></svg></i>
+    </span>
+  </div>
+
+  <main id="main"></main>
+
+  <footer>
+    <div id="status" aria-live="polite"></div>
+    <button id="go" type="button">Start sharing</button>
+  </footer>
+</div>
+
+<script>
+  const SRC = ['JBL TUNE570BT', 'Soundcore Liberty 4 NC', 'SoundPeats T3 Pro'];
+  let devs = [
+    { id: 'sc', name: 'Soundcore Liberty 4 NC', conn: 'Bluetooth', on: true,  delay: 0,  here: true },
+    { id: 'sp', name: 'SoundPeats T3 Pro',      conn: 'Bluetooth', on: true,  delay: 40, here: true },
+    { id: 'ap', name: 'AirPods Pro',            conn: 'Bluetooth', on: false, delay: 0,  here: false },
+  ];
+  const st = { mode: 'idle', open: null, startup: true, source: 0 };
+  const $ = s => document.querySelector(s);
+
+  function render() {
+    const fk = document.activeElement && document.activeElement.dataset && document.activeElement.dataset.fk;
+    const main = $('#main'), sharing = st.mode === 'sharing' || st.mode === 'lost';
+    const list = st.mode === 'empty' ? [] : devs;
+    let h = '';
+    if (st.mode === 'empty') {
+      h = `<h2>Sound</h2>
+        <div class="empty">
+          <p><b>No other audio devices found.</b></p>
+          <p class="sub">Pair headphones or a speaker in Windows, turn them on, and they will show up here by themselves.</p>
+          <a href="ms-settings:bluetooth">Open Bluetooth settings</a>
+        </div>`;
+    } else {
+      const shown = list.filter(d => d.name !== SRC[st.source]);
+      const isOn = d => d.on && d.here && !(st.mode === 'lost' && d.id === 'sp');
+      const onArr = shown.map(isOn);
+      const lit = (flag, k) => (sharing && flag) ? 'var(--accent)' : 'var(--rail)';
+      const anyAfter = k => onArr.slice(k + 1).some(Boolean);
+      const srcStyle = `--down:${lit(onArr.some(Boolean))}`;
+      h = `<h2>Sound</h2><ul class="tree ${sharing ? 'flow' : ''}" id="tree">
+        <li class="node src" style="${srcStyle}"><i class="dot"></i>
+          <div class="line1"><select id="src" data-fk="src" aria-label="Sound source">
+            ${SRC.map((n, i) => `<option value="${i}" ${i === st.source ? 'selected' : ''}>${n}${i === 0 ? ' (Windows default)' : ''}</option>`).join('')}
+          </select></div>
+          <div class="sub">Source. Plays directly, laptop speakers stay silent.</div>
+        </li>
+        ${shown.map((d, k) => {
+          const lost = st.mode === 'lost' && d.id === 'sp';
+          const on = d.on && d.here && !lost;
+          const sub = !d.here ? 'Not connected. Turn it on and it will join.'
+                    : lost ? 'Lost connection. Retrying…'
+                    : d.conn;
+          const trunk = `--up:${lit(onArr[k] || anyAfter(k))};--down:${lit(anyAfter(k))}`;
+          return `<li class="node dev ${on ? 'on' : 'off'}${lost ? ' lost' : ''}" data-id="${d.id}" style="${trunk}">
+            <div class="line1">
+              <span class="name">${d.name}</span>
+              <label class="switch"><input type="checkbox" data-fk="${d.id}:sw" aria-describedby="sub-${d.id}" ${d.on ? 'checked' : ''} ${d.here ? '' : 'disabled'} aria-label="Play on ${d.name}"><span></span></label>
+            </div>
+            <div class="sub ${lost ? 'error' : !d.here ? 'faint' : ''}" id="sub-${d.id}">${sub}${on ? ` · <button class="delaybtn ${d.delay ? 'set' : ''}" type="button" data-fk="${d.id}:delay" data-text="${d.delay ? '+' + d.delay + ' ms delay' : 'No delay'}" aria-expanded="${st.open === d.id}">${d.delay ? '+' + d.delay + ' ms delay' : 'No delay'}</button>` : ''}</div>
+            <div class="level" aria-hidden="true"><i></i></div>
+            <div class="tune ${st.open === d.id && on ? 'open' : ''}">
+              <div class="ctl"><input type="range" id="rg-${d.id}" min="0" max="400" step="5" value="${d.delay}" aria-label="Delay for ${d.name}"><output for="rg-${d.id}">${d.delay} ms</output></div>
+              <div class="row2"><span>Out of sync with the others?</span><button class="btn2 measure" type="button" data-fk="${d.id}:measure">Measure</button></div>
+            </div>
+          </li>`;
+        }).join('')}
+      </ul>
+      <label class="opt"><input type="checkbox" id="startup" data-fk="startup" ${st.startup ? 'checked' : ''}> Start with Windows, keep running in the tray</label>`;
+    }
+    main.innerHTML = h;
+    bind();
+    footer();
+    if (fk) { const el = main.querySelector('[data-fk="' + fk + '"]'); if (el) el.focus(); }
+    if (sharing && !raf) raf = requestAnimationFrame(tick);
+  }
+
+  function footer() {
+    const go = $('#go'), n = devs.filter(d => d.on && d.here && d.name !== SRC[st.source]).length;
+    const sharing = st.mode === 'sharing' || st.mode === 'lost';
+    go.classList.toggle('stop', sharing);
+    go.textContent = sharing ? 'Stop' : 'Start sharing';
+    go.disabled = st.mode === 'empty' || (!sharing && n === 0);
+    const s = $('#status');
+    if (st.mode === 'empty') s.innerHTML = 'Nothing to share to yet';
+    else if (st.mode === 'lost') s.innerHTML = `<b>Sharing to ${n - 1}</b> · 1 reconnecting`;
+    else if (st.mode === 'sharing') s.innerHTML = `<b>Sharing to ${n}</b>`;
+    else s.innerHTML = n ? `Ready · ${n} device${n === 1 ? '' : 's'} selected` : 'Pick at least one device';
+  }
+
+  function bind() {
+    const src = $('#src'); if (src) src.onchange = e => { st.source = +e.target.value; render(); };
+    const su = $('#startup'); if (su) su.onchange = e => st.startup = e.target.checked;
+    document.querySelectorAll('.node.dev').forEach(el => {
+      const d = devs.find(x => x.id === el.dataset.id);
+      el.querySelector('.switch input').onchange = e => { d.on = e.target.checked; render(); };
+      const b = el.querySelector('.delaybtn');
+      if (b) b.onclick = () => { st.open = st.open === d.id ? null : d.id; render(); };
+      const r = el.querySelector('input[type=range]');
+      r.oninput = () => { d.delay = +r.value; r.nextElementSibling.textContent = r.value + ' ms';
+        const bb = el.querySelector('.delaybtn'); if (bb) { const t = d.delay ? '+' + d.delay + ' ms delay' : 'No delay'; bb.textContent = t; bb.dataset.text = t; bb.classList.toggle('set', !!d.delay); } };
+      const m = el.querySelector('.measure');
+      m.onclick = () => {                       // simulated: the real app plays a tone and listens
+        m.disabled = true; m.textContent = 'Listening…';
+        setTimeout(() => { d.delay = 65 + Math.round(Math.random() * 60 / 5) * 5; st.open = d.id; render(); }, 1600);
+      };
+    });
+  }
+
+  $('#go').onclick = () => { st.mode = (st.mode === 'sharing' || st.mode === 'lost') ? 'idle' : 'sharing'; syncPreview(); render(); };
+
+  // preview controls
+  function syncPreview() {
+    document.querySelectorAll('[data-state]').forEach(b => b.setAttribute('aria-pressed', b.dataset.state === st.mode));
+  }
+  document.querySelectorAll('[data-state]').forEach(b => b.onclick = () => { st.mode = b.dataset.state; st.open = null; syncPreview(); render(); });
+  document.querySelectorAll('[data-theme-set]').forEach(b => b.onclick = () => {
+    document.body.dataset.theme = b.dataset.themeSet;
+    document.querySelectorAll('[data-theme-set]').forEach(x => x.setAttribute('aria-pressed', x === b));
+  });
+
+  // Levels: simulated here (the real app shows the true signal). The loop runs ONLY while sharing.
+  // Reduced motion removes transitions elsewhere but keeps this: it is data, not decoration.
+  let raf = 0;
+  function tick(t) {
+    document.querySelectorAll('.flow .node.on .level i').forEach((el, i) => {
+      const v = .45 + .22 * Math.sin(t / 420 + i * 1.3) + .12 * Math.sin(t / 130 + i);
+      el.style.transform = `scaleX(${Math.max(0, Math.min(1, v)).toFixed(3)})`;
+    });
+    raf = document.querySelector('.flow') ? requestAnimationFrame(tick) : 0;
+  }
+
+  // Optional deep links for review: mockup.html#dark-sharing or #light-idle
+  (function () {
+    const [t, s, o] = location.hash.slice(1).split('-');
+    if (o) st.open = 'sp';
+    if (t) { document.body.dataset.theme = t;
+      document.querySelectorAll('[data-theme-set]').forEach(x => x.setAttribute('aria-pressed', x.dataset.themeSet === t)); }
+    if (s) { st.mode = s; syncPreview(); }
+  })();
+
+  render();
+</script>
+</body>
+</html>
